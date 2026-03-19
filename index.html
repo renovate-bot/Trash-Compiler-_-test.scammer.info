@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coming Soon - Space Insanity</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* Centered Typography */
+        #ui-layer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none; /* Lets clicks pass through to the canvas/buttons */
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 5rem;
+            margin: 0;
+            letter-spacing: 0.5rem;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.5);
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin-top: 10px;
+            letter-spacing: 0.1rem;
+            color: #cccccc;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Interaction Button */
+        #start-btn {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background: transparent;
+            border: 2px solid #fff;
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.2s ease-in-out;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #start-btn:hover {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+
+        #start-btn.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <h1>Coming Soon</h1>
+        <p>Contact Email: wegj1@banabyte.com</p>
+    </div>
+
+    <button id="start-btn">Initiate Space Insanity</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // 1. Scene Setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Black Hole Particle System (Accretion Disk)
+        const particleCount = 20000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        const colorBase = new THREE.Color(0xaa00ff); // Deep purple
+        const colorHighlight = new THREE.Color(0xffffff); // White hot
+
+        for (let i = 0; i < particleCount; i++) {
+            // Math to create a donut/disk shape with an empty center
+            const radius = 10 + Math.random() * 60; // Empty void in center (radius 10)
+            const theta = Math.random() * Math.PI * 2;
+            const yOffset = (Math.random() - 0.5) * (80 / radius); // Thinner at the edges, thicker near center
+
+            const x = Math.cos(theta) * radius;
+            const y = yOffset;
+            const z = Math.sin(theta) * radius;
+
+            positions[i * 3] = x;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = z;
+
+            // Mix colors based on distance to the black hole
+            const mixedColor = colorBase.clone().lerp(colorHighlight, 10 / radius);
+            colors[i * 3] = mixedColor.r;
+            colors[i * 3 + 1] = mixedColor.g;
+            colors[i * 3 + 2] = mixedColor.b;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const material = new THREE.PointsMaterial({
+            size: 0.2,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particleSystem = new THREE.Points(geometry, material);
+        // Tilt the accretion disk for a better cinematic angle
+        particleSystem.rotation.x = Math.PI / 4; 
+        scene.add(particleSystem);
+
+        // 3. Animation & "Insanity" Logic
+        let insanityMode = false;
+        const baseFov = 75;
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            insanityMode = true;
+            document.getElementById('start-btn').classList.add('hidden');
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = Date.now() * 0.001;
+
+            // Base slow rotation
+            particleSystem.rotation.y = time * 0.5;
+            particleSystem.rotation.z = time * 0.2;
+
+            if (insanityMode) {
+                // Simulate a fast, aggressive beat (~150 BPM)
+                const beat = Math.pow(Math.sin(time * 12), 4); // Sharp peaks
+                const heavyDrop = Math.pow(Math.sin(time * 2), 10); // Slower, massive drops
+
+                // 1. Violent Camera Shake
+                const shakeIntensity = (beat * 0.5) + (heavyDrop * 2);
+                camera.position.x = (Math.random() - 0.5) * shakeIntensity;
+                camera.position.y = (Math.random() - 0.5) * shakeIntensity;
+
+                // 2. Warping Field of View (Pulling into the black hole)
+                camera.fov = baseFov + (heavyDrop * 40) - (beat * 10);
+                camera.updateProjectionMatrix();
+
+                // 3. Particle System erratic scaling/collapsing
+                const scaleWarp = 1 - (heavyDrop * 0.3); // Collapses inward on big drops
+                particleSystem.scale.set(scaleWarp, scaleWarp, scaleWarp);
+                
+                // Color flashing on heavy drops (Red/White flash)
+                if (heavyDrop > 0.8) {
+                    material.color.setHex(Math.random() > 0.5 ? 0xff0033 : 0xffffff);
+                } else {
+                    material.color.setHex(0xffffff); // Reset to allow vertex colors to show
+                }
+            } else {
+                // Gentle idle drift
+                camera.position.x = Math.sin(time * 0.5) * 2;
+                camera.position.y = Math.cos(time * 0.5) * 2;
+                camera.lookAt(0, 0, 0);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // 4. Handle Window Resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start loop
+        animate();
+    </script>
+</body>
+</html>
